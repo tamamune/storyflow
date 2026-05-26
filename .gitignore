@@ -1,0 +1,18 @@
+# Storyflow Git Ignore List
+
+# Apktool files
+apktool.jar
+apktool.yml
+original/
+
+# Keystores & Signed outputs
+*.keystore
+*.jks
+dist/
+
+# Temporary generated scripts/files
+silence_base64.txt
+silence_base64_short.txt
+generate_silence.ps1
+generate_silence_short.ps1
+fix_images.ps1

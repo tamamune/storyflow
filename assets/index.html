@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Storyflow Premium</title>
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="sepia-theme">
+    <div class="app-container">
+        
+        <!-- Top Bar: Book Info -->
+        <header class="top-bar">
+            <div class="book-info">
+                <span id="currentFileTitle">物語を開く...</span>
+                <span class="divider">|</span>
+                <span id="currentProgressText">0 / 0</span>
+            </div>
+            <input type="file" id="filePicker" accept=".txt,.epub,text/plain,application/epub+zip" hidden>
+        </header>
+
+        <!-- Main Content (Reader) -->
+        <main class="reader-area" id="readerArea">
+            <div id="textContainer" class="text-canvas serif-text">
+                <div class="empty-state">
+                    <h2>さあ、物語を始めましょう</h2>
+                    <p>テキストやEPUBファイルを読み込んでください</p>
+                    <button id="initialOpenBtn" class="premium-btn" style="margin-bottom: 15px;">
+                        <i class="fas fa-folder-open"></i> ファイルを開く
+                    </button>
+                    <button id="resumeBtn" class="premium-btn hidden-btn" style="background: var(--text-secondary);">
+                        <i class="fas fa-play"></i> 続きから読む
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Control Center (Glass Bottom Bar) -->
+        <footer class="glass-bottom-bar">
+            <div class="progress-section">
+                <span id="currentTime" class="time-label">0:00</span>
+                <input type="range" id="seekBar" class="minimal-slider" value="0" min="0" max="100">
+                <span id="remainingTime" class="time-label">-0:00</span>
+            </div>
+
+            <div class="controls-section">
+                <button id="bottomOpenBtn" class="icon-btn" title="ファイルを開く">
+                    <i class="fas fa-folder-open"></i>
+                </button>
+                
+                <button id="navLibrary" class="icon-btn" title="ライブラリ">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+
+                <button id="skipBack" class="icon-btn" title="戻る">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <!-- Centered Play Button -->
+                <button id="playBtn" class="play-orbit">
+                    <i class="fas fa-play"></i>
+                </button>
+
+                <button id="skipForward" class="icon-btn" title="進む">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <!-- User Dictionary Button -->
+                <button id="dictBtn" class="icon-btn" title="ユーザー辞書">
+                    <i class="fas fa-book"></i>
+                </button>
+                
+                <!-- Speed/Settings Button -->
+                <button id="speedBtn" class="icon-btn" title="設定">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="modalOverlay" class="modal-overlay"></div>
+    
+    <div id="settingsModal" class="side-modal left">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>設定</h2>
+                <button class="close-modal" id="closeSettingsModal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="scroll-content settings-body">
+                <div class="setting-item">
+                    <label>TTS エンジン</label>
+                    <select id="engineSelect" class="premium-select">
+                        <option value="standard">標準 (端末の音声)</option>
+                        <option value="google">Google Cloud (高品質AI)</option>
+                    </select>
+                </div>
+
+                <div id="googleApiKeyGroup" class="setting-item hidden">
+                    <label>Google Cloud API Key</label>
+                    <input type="password" id="googleApiKeyInput" class="premium-input" placeholder="AIzaSy...">
+                </div>
+
+                <div class="setting-item">
+                    <label>音声の種類</label>
+                    <select id="voiceSelect" class="premium-select">
+                        <!-- Voices populated dynamically -->
+                    </select>
+                    <button id="openTtsSettingsBtn" class="premium-btn secondary full-width" style="margin-top: 10px; font-size: 0.8rem;">
+                        <i class="fas fa-cog"></i> 端末の音声設定を開く
+                    </button>
+                </div>
+                
+                <div class="setting-group">
+                    <label>再生速度 (<span id="speedDisplay">1.0</span>x)</label>
+                    <input type="range" id="speedSlider" class="premium-slider" min="0.5" max="3.0" step="0.1" value="1.0">
+                </div>
+
+                <div class="setting-group">
+                    <label>スリープタイマー</label>
+                    <select id="timerSelect" class="premium-select">
+                        <option value="0">オフ</option>
+                        <option value="15">15分</option>
+                        <option value="30">30分</option>
+                        <option value="60">60分</option>
+                        <option value="999">この章の終わりまで</option>
+                    </select>
+                    <div id="timerStatus" class="timer-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="libraryModal" class="side-modal right">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ライブラリ</h2>
+                <button class="close-modal" id="closeLibraryModal"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="historyList" class="scroll-content">
+                <!-- 履歴アイテムがここに動的に生成されます -->
+            </div>
+        </div>
+    </div>
+
+    <!-- User Dictionary Modal -->
+    <div id="dictModal" class="side-modal right">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ユーザー辞書</h2>
+                <button class="close-modal" id="closeDictModal"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div id="dictListView" class="scroll-content">
+                <div class="dict-actions">
+                    <button id="addWordBtn" class="premium-btn full-width">新規登録</button>
+                    <div class="dict-sync-btns">
+                        <button id="exportDictBtn" class="premium-btn secondary"><i class="fas fa-file-export"></i> 保存</button>
+                        <button id="importDictBtn" class="premium-btn secondary"><i class="fas fa-file-import"></i> 読込</button>
+                    </div>
+                </div>
+                <div id="dictList" class="dict-list">
+                    <!-- Words go here -->
+                </div>
+            </div>
+
+            <div id="dictEditView" class="scroll-content hidden">
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label>単語 (漢字など)</label>
+                        <input type="text" id="dictWordInput" placeholder="例: 飛鳥">
+                    </div>
+                    <div class="form-group">
+                        <label>読み方 (ひらがな)</label>
+                        <input type="text" id="dictReadingInput" placeholder="例: あすか">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>イントネーション (一文字ずつ設定)</label>
+                        <div id="intonationGrid" class="intonation-grid">
+                            <!-- Character pitch toggles generated dynamically -->
+                        </div>
+                        <p class="help-text">クリックで高低（赤=高 / 灰=低）を切り替えます</p>
+                    </div>
+
+                    <div class="form-buttons">
+                        <button id="previewWordBtn" class="premium-btn secondary"><i class="fas fa-volume-up"></i> 試聴</button>
+                        <button id="saveWordBtn" class="premium-btn">保存</button>
+                        <button id="cancelWordBtn" class="premium-btn secondary">キャンセル</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ライブラリ</h2>
+                <button class="close-modal" id="closeLibraryModal"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="historyList" class="scroll-content">
+                <!-- History items -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/jszip.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
