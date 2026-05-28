@@ -104,7 +104,6 @@ class StoryflowApp {
             previewWordBtn: document.getElementById('previewWordBtn'),
             dictWordInput: document.getElementById('dictWordInput'),
             dictReadingInput: document.getElementById('dictReadingInput'),
-            intonationGrid: document.getElementById('intonationGrid'),
             voiceSelect: document.getElementById('voiceSelect'),
             speedSlider: document.getElementById('speedSlider'),
             speedDisplay: document.getElementById('speedDisplay'),
@@ -199,9 +198,6 @@ class StoryflowApp {
             this.closeLibrary();
             this.closeSettings();
         });
-        if (this.dom.dictReadingInput) {
-            this.dom.dictReadingInput.addEventListener('input', () => this.updateIntonationGrid());
-        }
         
         // Skip 1 sentence back/forward in reader view
         // Skip button logic (single/double click)
@@ -729,12 +725,10 @@ class StoryflowApp {
             this.dom.dictWordInput.value = entry.word;
             this.dom.dictReadingInput.value = entry.reading;
             this.dom.dictWordInput.dataset.editIndex = index;
-            this.updateIntonationGrid(entry.intonation);
         } else {
             this.dom.dictWordInput.value = '';
             this.dom.dictReadingInput.value = '';
             this.dom.dictWordInput.dataset.editIndex = -1;
-            this.updateIntonationGrid();
         }
     }
 
@@ -743,38 +737,13 @@ class StoryflowApp {
         this.dom.dictEditView.classList.add('hidden');
     }
 
-    updateIntonationGrid(savedIntonation = []) {
-        const reading = this.dom.dictReadingInput.value;
-        if (!this.dom.intonationGrid) return;
-        
-        this.dom.intonationGrid.innerHTML = reading.split('').map((char, i) => {
-            const isHigh = savedIntonation[i] === 1;
-            return `
-                <div class="intonation-node">
-                    <div class="pitch-toggle ${isHigh ? 'high' : ''}" data-index="${i}"></div>
-                    <span>${char}</span>
-                </div>
-            `;
-        }).join('');
-
-        // Add toggle listeners
-        this.dom.intonationGrid.querySelectorAll('.pitch-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.classList.toggle('high');
-            });
-        });
-    }
-
     saveWord() {
         const word = this.dom.dictWordInput.value.trim();
         const reading = this.dom.dictReadingInput.value.trim();
         if (!word || !reading) return;
 
-        const intonation = Array.from(this.dom.intonationGrid.querySelectorAll('.pitch-toggle'))
-                                .map(btn => btn.classList.contains('high') ? 1 : 0);
-
         const index = parseInt(this.dom.dictWordInput.dataset.editIndex);
-        const entry = { word, reading, intonation };
+        const entry = { word, reading };
 
         if (index >= 0) {
             this.state.dictionary[index] = entry;
@@ -817,10 +786,7 @@ class StoryflowApp {
         const reading = this.dom.dictReadingInput.value.trim();
         if (!reading) return;
         
-        const intonation = Array.from(this.dom.intonationGrid.querySelectorAll('.pitch-toggle'))
-                                .map(btn => btn.classList.contains('high') ? 1 : 0);
-        
-        const ssml = this.generateWordSSML({ reading, intonation });
+        const ssml = this.generateWordSSML({ reading });
         
         if (window.AndroidBridge) {
             window.AndroidBridge.stop();
@@ -848,19 +814,7 @@ class StoryflowApp {
     }
 
     generateWordSSML(entry) {
-        // アクセント記号（'）がそのまま読まれてしまう環境のため、記号を廃止。
-        // 代わりに、SSMLが効く環境のために単純なタグのみを使用します。
-        let body = '';
-        entry.reading.split('').forEach((char, i) => {
-            if (entry.intonation[i] === 1) {
-                body += `<prosody pitch="high">${char}</prosody>`;
-            } else {
-                body += char;
-            }
-        });
-        
-        // 記号を読ませないよう、タグの有無を厳密に制御（SSMLに非対応の環境ではタグが無視されることを期待）
-        return `<speak>${body}</speak>`;
+        return `<speak>${entry.reading}</speak>`;
     }
 
     hiraToKata(str) {
