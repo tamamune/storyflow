@@ -11,7 +11,7 @@ class StoryflowApp {
             playbackRate: parseFloat(localStorage.getItem('sf_rate') || '1.0'),
             selectedVoiceURI: localStorage.getItem('sf_voice') || '',
             history: JSON.parse(localStorage.getItem('sf_history') || '[]'),
-            dictionary: JSON.parse(localStorage.getItem('sf_dict') || '[]'),
+            dictionary: JSON.parse(localStorage.getItem('sf_dict') || '[]').map(({ word, reading }) => ({ word, reading })),
             currentTitle: '新規テキスト',
             timerHandle: null,
             timerMinutes: 0,
@@ -181,7 +181,9 @@ class StoryflowApp {
         if (this.dom.addWordBtn) this.dom.addWordBtn.addEventListener('click', () => this.showWordEditor());
         if (this.dom.exportDictBtn) this.dom.exportDictBtn.addEventListener('click', () => {
             if (window.AndroidBridge) {
-                window.AndroidBridge.exportDictionary(JSON.stringify(this.state.dictionary));
+                // エクスポートデータから不要なイントネーション情報を完全に除外してシリアライズします
+                const cleanDict = this.state.dictionary.map(({ word, reading }) => ({ word, reading }));
+                window.AndroidBridge.exportDictionary(JSON.stringify(cleanDict));
             }
         });
         if (this.dom.importDictBtn) this.dom.importDictBtn.addEventListener('click', () => {
@@ -761,7 +763,8 @@ class StoryflowApp {
             const data = JSON.parse(json);
             if (Array.isArray(data)) {
                 if (confirm(`${data.length}件の単語をインポートしますか？現在の辞書は上書きされます。`)) {
-                    this.state.dictionary = data;
+                    // インポートデータから不要なイントネーション情報を除外します
+                    this.state.dictionary = data.map(({ word, reading }) => ({ word, reading }));
                     localStorage.setItem('sf_dict', JSON.stringify(this.state.dictionary));
                     this.updateDictUI();
                     alert("インポートが完了しました。");
