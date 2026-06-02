@@ -1151,6 +1151,9 @@ class StoryflowApp {
 
         // Play current
         if (this.currentGoogleBlobUrl) {
+            this.googleAudioPlayer.pause();
+            this.googleAudioPlayer.src = '';
+            this.googleAudioPlayer.load();
             this.googleAudioPlayer.src = this.currentGoogleBlobUrl;
             this.googleAudioPlayer.play().catch(e => {
                 console.error("Google Play Error:", e);
@@ -1192,7 +1195,7 @@ class StoryflowApp {
                 input: { ssml: ssml },
                 voice: { languageCode: 'ja-JP', name: this.state.selectedVoiceURI },
                 audioConfig: { 
-                    audioEncoding: 'MP3',
+                    audioEncoding: 'LINEAR16',
                     speakingRate: parseFloat(this.state.playbackRate)
                 }
             })
@@ -1200,7 +1203,7 @@ class StoryflowApp {
 
         const data = await response.json();
         if (data.audioContent) {
-            const blob = this.base64ToBlob(data.audioContent, 'audio/mp3');
+            const blob = this.base64ToBlob(data.audioContent, 'audio/wav');
             return URL.createObjectURL(blob);
         } else {
             throw new Error(data.error?.message || '不明なエラー');
