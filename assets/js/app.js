@@ -16,7 +16,11 @@ class StoryflowApp {
             timerHandle: null,
             timerMinutes: 0,
             ttsEngine: localStorage.getItem('sf_engine') || 'standard',
-            googleApiKey: localStorage.getItem('sf_google_api_key') || ''
+            googleApiKey: localStorage.getItem('sf_google_api_key') || '',
+            dialogueActing: localStorage.getItem('sf_dialogue_acting') === 'true',
+            dialogueMode: localStorage.getItem('sf_dialogue_mode') || 'pitch',
+            dialoguePitch: parseFloat(localStorage.getItem('sf_dialogue_pitch') || '2.0'),
+            dialogueVoice: localStorage.getItem('sf_dialogue_voice') || 'ja-JP-Neural2-C'
         };
 
         this.googleAudioPlayer = new Audio();
@@ -59,11 +63,24 @@ class StoryflowApp {
     }
 
     updateTtsUiVisibility() {
+        const isGoogle = this.state.ttsEngine === 'google';
         if (this.dom.googleApiKeyGroup) {
-            this.dom.googleApiKeyGroup.classList.toggle('hidden', this.state.ttsEngine !== 'google');
+            this.dom.googleApiKeyGroup.classList.toggle('hidden', !isGoogle);
+        }
+        if (this.dom.googleTtsActingGroup) {
+            this.dom.googleTtsActingGroup.classList.toggle('hidden', !isGoogle);
+        }
+        if (this.dom.actingDetails) {
+            this.dom.actingDetails.classList.toggle('hidden', !isGoogle || !this.state.dialogueActing);
+        }
+        if (this.dom.actingPitchGroup) {
+            this.dom.actingPitchGroup.classList.toggle('hidden', this.state.dialogueMode !== 'pitch');
+        }
+        if (this.dom.actingVoiceGroup) {
+            this.dom.actingVoiceGroup.classList.toggle('hidden', this.state.dialogueMode !== 'voice');
         }
         if (this.dom.openTtsSettingsBtn) {
-            this.dom.openTtsSettingsBtn.classList.toggle('hidden', this.state.ttsEngine === 'google');
+            this.dom.openTtsSettingsBtn.classList.toggle('hidden', isGoogle);
         }
     }
 
@@ -112,7 +129,16 @@ class StoryflowApp {
             openTtsSettingsBtn: document.getElementById('openTtsSettingsBtn'),
             engineSelect: document.getElementById('engineSelect'),
             googleApiKeyGroup: document.getElementById('googleApiKeyGroup'),
-            googleApiKeyInput: document.getElementById('googleApiKeyInput')
+            googleApiKeyInput: document.getElementById('googleApiKeyInput'),
+            googleTtsActingGroup: document.getElementById('googleTtsActingGroup'),
+            actingToggle: document.getElementById('actingToggle'),
+            actingDetails: document.getElementById('actingDetails'),
+            actingModeSelect: document.getElementById('actingModeSelect'),
+            actingPitchGroup: document.getElementById('actingPitchGroup'),
+            actingPitchDisplay: document.getElementById('actingPitchDisplay'),
+            actingPitchSlider: document.getElementById('actingPitchSlider'),
+            actingVoiceGroup: document.getElementById('actingVoiceGroup'),
+            actingVoiceSelect: document.getElementById('actingVoiceSelect')
         };
     }
 
@@ -174,6 +200,50 @@ class StoryflowApp {
             this.dom.googleApiKeyInput.addEventListener('input', (e) => {
                 this.state.googleApiKey = e.target.value;
                 localStorage.setItem('sf_google_api_key', this.state.googleApiKey);
+            });
+        }
+
+        if (this.dom.actingToggle) {
+            this.dom.actingToggle.checked = this.state.dialogueActing;
+            this.dom.actingToggle.addEventListener('change', (e) => {
+                this.state.dialogueActing = e.target.checked;
+                localStorage.setItem('sf_dialogue_acting', this.state.dialogueActing);
+                this.updateTtsUiVisibility();
+                this.pause();
+            });
+        }
+
+        if (this.dom.actingModeSelect) {
+            this.dom.actingModeSelect.value = this.state.dialogueMode;
+            this.dom.actingModeSelect.addEventListener('change', (e) => {
+                this.state.dialogueMode = e.target.value;
+                localStorage.setItem('sf_dialogue_mode', this.state.dialogueMode);
+                this.updateTtsUiVisibility();
+                this.pause();
+            });
+        }
+
+        if (this.dom.actingPitchSlider) {
+            this.dom.actingPitchSlider.value = this.state.dialoguePitch;
+            if (this.dom.actingPitchDisplay) {
+                this.dom.actingPitchDisplay.textContent = '+' + this.state.dialoguePitch.toFixed(1);
+            }
+            this.dom.actingPitchSlider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                this.state.dialoguePitch = val;
+                if (this.dom.actingPitchDisplay) {
+                    this.dom.actingPitchDisplay.textContent = '+' + val.toFixed(1);
+                }
+                localStorage.setItem('sf_dialogue_pitch', val);
+                this.pause();
+            });
+        }
+
+        if (this.dom.actingVoiceSelect) {
+            this.dom.actingVoiceSelect.addEventListener('change', (e) => {
+                this.state.dialogueVoice = e.target.value;
+                localStorage.setItem('sf_dialogue_voice', this.state.dialogueVoice);
+                this.pause();
             });
         }
 
@@ -838,6 +908,18 @@ class StoryflowApp {
         // Sync UI
         if (this.dom.speedSlider) this.dom.speedSlider.value = this.state.playbackRate;
         if (this.dom.speedDisplay) this.dom.speedDisplay.textContent = this.state.playbackRate.toFixed(1);
+
+        if (this.dom.actingToggle) this.dom.actingToggle.checked = this.state.dialogueActing;
+        if (this.dom.actingModeSelect) this.dom.actingModeSelect.value = this.state.dialogueMode;
+        if (this.dom.actingPitchSlider) {
+            this.dom.actingPitchSlider.value = this.state.dialoguePitch;
+            if (this.dom.actingPitchDisplay) {
+                this.dom.actingPitchDisplay.textContent = '+' + this.state.dialoguePitch.toFixed(1);
+            }
+        }
+        if (this.dom.actingVoiceSelect) this.dom.actingVoiceSelect.value = this.state.dialogueVoice;
+
+        this.updateTtsUiVisibility();
     }
 
     initVoices() {
@@ -861,6 +943,17 @@ class StoryflowApp {
                 if (this.dom.voiceSelect) {
                     this.dom.voiceSelect.innerHTML = googleVoices.map(v => 
                         `<option value="${v.name}" ${v.name === this.state.selectedVoiceURI ? 'selected' : ''}>${v.label}</option>`
+                    ).join('');
+                }
+
+                if (!googleVoices.find(v => v.name === this.state.dialogueVoice)) {
+                    this.state.dialogueVoice = 'ja-JP-Neural2-C';
+                    localStorage.setItem('sf_dialogue_voice', this.state.dialogueVoice);
+                }
+
+                if (this.dom.actingVoiceSelect) {
+                    this.dom.actingVoiceSelect.innerHTML = googleVoices.map(v => 
+                        `<option value="${v.name}" ${v.name === this.state.dialogueVoice ? 'selected' : ''}>${v.label}</option>`
                     ).join('');
                 }
                 return;
@@ -1245,6 +1338,21 @@ class StoryflowApp {
         replacements.forEach(rep => {
             t = t.replaceAll(rep.marker, rep.html);
         });
+
+        // Dialogue Auto Acting
+        if (this.state.dialogueActing) {
+            const quoteRegex = /([「『])([^」』]+)([」』])/g;
+            t = t.replace(quoteRegex, (match, openQ, content, closeQ) => {
+                if (this.state.dialogueMode === 'pitch') {
+                    const pitchVal = '+' + parseFloat(this.state.dialoguePitch).toFixed(1) + 'st';
+                    return `<prosody pitch="${pitchVal}">${openQ}${content}${closeQ}</prosody>`;
+                } else if (this.state.dialogueMode === 'voice') {
+                    const voiceName = this.state.dialogueVoice || 'ja-JP-Neural2-C';
+                    return `<voice name="${voiceName}">${openQ}${content}${closeQ}</voice>`;
+                }
+                return match;
+            });
+        }
 
         return `<speak>${t}</speak>`;
     }

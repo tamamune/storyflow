@@ -110,6 +110,38 @@
                     <input type="password" id="googleApiKeyInput" class="premium-input" placeholder="AIzaSy...">
                 </div>
 
+                <div id="googleTtsActingGroup" class="setting-group hidden" style="margin-top: 15px; border-top: 1px solid rgba(122, 106, 83, 0.1); padding-top: 15px;">
+                    <div class="switch-container">
+                        <span class="switch-label">セリフの自動演じ分け</span>
+                        <label class="switch">
+                            <input type="checkbox" id="actingToggle">
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div id="actingDetails" class="hidden" style="margin-top: 15px;">
+                        <div class="setting-item" style="margin-bottom: 15px;">
+                            <label>演じ分けの変更方法</label>
+                            <select id="actingModeSelect" class="premium-select">
+                                <option value="pitch">ピッチ（声の高さ）の変更</option>
+                                <option value="voice">異なる話者（マルチ話者）の割り当て</option>
+                            </select>
+                        </div>
+
+                        <div id="actingPitchGroup" class="setting-group" style="margin-bottom: 15px;">
+                            <label>セリフのピッチ調整 (<span id="actingPitchDisplay">+2.0</span>st)</label>
+                            <input type="range" id="actingPitchSlider" class="premium-slider" min="0.5" max="4.0" step="0.5" value="2.0">
+                        </div>
+
+                        <div id="actingVoiceGroup" class="setting-item hidden" style="margin-bottom: 15px;">
+                            <label>セリフの話者（音声）</label>
+                            <select id="actingVoiceSelect" class="premium-select">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="setting-item">
                     <label>音声の種類</label>
                     <select id="voiceSelect" class="premium-select">
