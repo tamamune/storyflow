@@ -531,8 +531,26 @@ class StoryflowApp {
                 return;
             }
             html += '<p class="book-paragraph">';
-            // 句読点を保持して分割
-            const sentenceMatches = p.match(/[^。！？.!?]+[。！？.!?]*/g) || [p];
+            const sentenceMatches = [];
+            let currentStr = "";
+            let inQuoteCount = 0;
+            
+            for (let i = 0; i < p.length; i++) {
+                const char = p[i];
+                currentStr += char;
+                if (char === '「' || char === '『') {
+                    inQuoteCount++;
+                } else if (char === '」' || char === '』') {
+                    inQuoteCount = Math.max(0, inQuoteCount - 1);
+                } else if (['。', '！', '？', '.', '!'].includes(char) && inQuoteCount === 0) {
+                    sentenceMatches.push(currentStr);
+                    currentStr = "";
+                }
+            }
+            if (currentStr.trim().length > 0) {
+                sentenceMatches.push(currentStr);
+            }
+            
             sentenceMatches.forEach(s => {
                 if (s.trim().length > 0) {
                     this.state.sentences.push(s);
@@ -1244,9 +1262,6 @@ class StoryflowApp {
 
         // Play current
         if (this.currentGoogleBlobUrl) {
-            this.googleAudioPlayer.pause();
-            this.googleAudioPlayer.src = '';
-            this.googleAudioPlayer.load();
             this.googleAudioPlayer.src = this.currentGoogleBlobUrl;
             this.googleAudioPlayer.play().catch(e => {
                 console.error("Google Play Error:", e);
@@ -1345,14 +1360,18 @@ class StoryflowApp {
             t = t.replace(quoteRegex, (match, openQ, content, closeQ) => {
                 if (this.state.dialogueMode === 'pitch') {
                     const pitchVal = '+' + parseFloat(this.state.dialoguePitch).toFixed(1) + 'st';
-                    return `<prosody pitch="${pitchVal}">${openQ}${content}${closeQ}</prosody>`;
+                    return `<break time="100ms"/><prosody pitch="${pitchVal}">${content}</prosody><break time="100ms"/>`;
                 } else if (this.state.dialogueMode === 'voice') {
                     const voiceName = this.state.dialogueVoice || 'ja-JP-Neural2-C';
-                    return `<voice name="${voiceName}">${openQ}${content}${closeQ}</voice>`;
+                    return `<break time="100ms"/><voice name="${voiceName}">${content}</voice><break time="100ms"/>`;
                 }
                 return match;
             });
         }
+        
+        // Remove any remaining brackets (when acting is off or for other unhandled brackets)
+        t = t.replace(/[「『]/g, '<break time="100ms"/>');
+        t = t.replace(/[」』]/g, '<break time="100ms"/>');
 
         return `<speak>${t}</speak>`;
     }
